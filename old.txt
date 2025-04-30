@@ -1,0 +1,41 @@
+const express = require('express');
+const http = require('http');
+const crypto = require('crypto');
+
+const app = express();
+
+const server = http.createServer(app);
+
+app.get('/', (req, res) => {
+    res.send('WebSocket server is running.');
+});
+
+server.on('upgrade', (req, socket) => {
+    if (req.headers['upgrade'] !== 'websocket') {
+        socket.end('HTTP/1.1 400 Bad Request');
+        return;
+    }
+
+    const acceptKey = req.headers['sec-websocket-key'];
+    const hash = crypto.createHash('sha1');
+    hash.update(acceptKey + '258EAFA5-E914-47DA-95CA-C5AB0DC85B11');
+    const acceptValue = Buffer.from(hash.digest()).toString('base64');
+
+    const response = [
+        'HTTP/1.1 101 Switching Protocols',
+        'Connection: Upgrade',
+        'Upgrade: websocket',
+        `Sec-WebSocket-Accept: ${acceptValue}`,
+        '',
+        ''
+    ].join('\r\n');
+
+    socket.write(response);
+
+    // Now you can handle WebSocket communication with the client
+    // For example, you can listen for messages using socket.on('data', ...)
+});
+
+server.listen(5000, () => {
+    console.log('WebSocket server is listening on port 3000');
+});
